@@ -533,7 +533,9 @@ def run_experiments(
                         )
                     except Exception as exc:
                         error_cacher = cache_cls(cache_name="error", cache_path=cache_path, **cache_cls_kwargs)
-                        exception_info = json.dumps({"error": str(exc), "traceback": traceback.format_exc()})
+                        exception_info = json.dumps({
+                            "exc_cls": type(exc).__name__, "error": str(exc), "traceback": traceback.format_exc()
+                        })
                         error_cacher.save_cache(exception_info)
                         if raise_on_failure:
                             raise

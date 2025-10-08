@@ -105,7 +105,6 @@ class MethodMetadata:
         compute: Literal["cpu", "gpu"] | None = None,
     ) -> Self:
         result_lst_dict = []
-
         for r in results_lst:
             cur_result = get_info_from_result(result=r)
             result_lst_dict.append(cur_result)

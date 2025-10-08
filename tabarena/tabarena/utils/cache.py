@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from typing import Union
 
@@ -178,6 +179,65 @@ class CacheFunctionPickle(AbstractCacheFunction[object]):
     def load_cache(self) -> object:
         with open(self.cache_file, "rb") as f:
             return pickle.loads(f.read())
+
+
+class CacheFunctionJson(AbstractCacheFunction[object]):
+    """
+    Cache function that saves and loads JSON files.
+    """
+    _load_after_cache = False  # Loading a pickle is unnecessary when the contents are already in memory
+
+    def __init__(self, cache_name: str, cache_path: Path | str | None = None, include_self_in_call: bool = False):
+        super().__init__(include_self_in_call=include_self_in_call)
+        self.cache_name = cache_name
+        if cache_path is None:
+            # TODO: Remove default_cache_path?
+            cache_path = default_cache_path
+        cache_path = str(cache_path)
+        if cache_path.endswith(os.path.sep):
+            raise ValueError(f"cache_path must not end with a directory separator! (cache_path='{cache_path}'")
+        self.cache_path = cache_path
+        self.is_s3 = self.cache_path.startswith("s3://")
+
+    @property
+    def cache_file(self) -> str:
+        if self.is_s3:
+            return f"{self.cache_path}/{self.cache_name}.json"
+        return str(Path(self.cache_path) / (self.cache_name + ".json"))
+
+    @property
+    def exists(self) -> bool:
+        if self.is_s3:
+            try:
+                s3 = boto3.client('s3')
+                bucket, key = s3_utils.s3_path_to_bucket_prefix(self.cache_file)
+                s3.head_object(Bucket=bucket, Key=key)
+                return True
+            except s3.exceptions.ClientError as e:
+                if e.response['Error']['Code'] == '404':
+                    return False
+                else:
+                    raise
+        else:
+            return Path(self.cache_file).exists()
+
+    def save_cache(self, data: object) -> None:
+        if self.is_s3:
+            s3 = boto3.client('s3')
+            bucket, key = s3_utils.s3_path_to_bucket_prefix(self.cache_file)
+            cache = json.dumps(data)
+            print(f'Writing cache with size {round(sys.getsizeof(cache) / 1e6, 3)} MB to {self.cache_file}')
+            s3.put_object(Bucket=bucket, Key=key, Body=cache)
+        else:
+            cache_file = self.cache_file
+            Path(cache_file).parent.mkdir(parents=True, exist_ok=True)
+            with open(cache_file, "w") as f:
+                print(f'Writing JSON cache')
+                json.dump(data, f)
+
+    def load_cache(self) -> object:
+        with open(self.cache_file, "r") as f:
+            return json.load(f)
 
 
 # TODO: Delete and use CacheFunctionPickle
