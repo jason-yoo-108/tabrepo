@@ -69,6 +69,7 @@ def compare(
     calibration_framework: str | None = None,
     fillna: str | pd.DataFrame | None = None,
     score_on_val: bool = False,
+    tmp_treat_tasks_independently: bool = False,  # FIXME: Update
 ):
     df_results = df_results.copy()
     if "method_type" not in df_results:
@@ -77,6 +78,8 @@ def compare(
         df_results["method_subtype"] = np.nan
     if "config_type" not in df_results:
         df_results["config_type"] = None
+    if "imputed" not in df_results:
+        df_results["imputed"] = False
 
     if isinstance(fillna, str):
         fillna = df_results[df_results["method"] == fillna]
@@ -115,6 +118,7 @@ def compare(
         plot_times=True,
         plot_other=False,
         calibration_framework=calibration_framework,
+        tmp_treat_tasks_independently=tmp_treat_tasks_independently,
     )
 
 
