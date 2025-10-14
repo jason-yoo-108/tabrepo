@@ -6,9 +6,11 @@ import argparse
 import logging
 import uuid
 import pandas as pd
+import time
 
 from autogluon.common.savers import save_pd
 from botocore.config import Config
+from botocore.exceptions import ClientError
 from datetime import datetime
 from pathlib import Path
 from tabflow.core.resource_manager import TrainingJobResourceManager
@@ -311,7 +313,19 @@ class JobManager:
         )
 
         for task_batch in task_batch_lst:
-            self.run_task_batch(tasks=task_batch, check_cache=check_cache)
+            start_delay, max_attempts = 10, 10
+            for i in range(max_attempts):
+                try:
+                    self.run_task_batch(tasks=task_batch, check_cache=check_cache)
+                    break
+                except ClientError as e:
+                    if e.response['Error']['Code'] != 'ThrottlingException':
+                        raise e
+                    if i >= max_attempts-1:
+                        logger.critical(f"Job Creation failed {max_attempts} time; Crashing program.")
+                        raise e
+                    logger.error(f"Job creation failed from throttling error; repeating for {i+1}/{max_attempts} time.")
+                    time.sleep(start_delay * 2**i)
 
         if self.wait:
             self.resource_manager.wait_for_all_jobs(

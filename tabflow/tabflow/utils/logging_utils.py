@@ -102,7 +102,7 @@ def save_training_job_logs(sagemaker_client, s3_client, job_name, bucket, cache_
             if "Processing task: Dataset=" in line:
                 if current_task and task_content:
                     task_logs[current_task] = '\n'.join(task_content)
-                    task_paths[current_task] = f"{current_method}/{current_tid}/{current_fold}"
+                    task_paths[current_task] = f"{current_method}/{current_tid}/{current_repeat}_{current_fold}"
                     task_content = []
                 
                 # Extract task identifiers

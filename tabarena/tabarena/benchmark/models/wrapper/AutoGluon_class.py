@@ -203,6 +203,7 @@ class AGSingleBagWrapper(AGSingleWrapper):
     def bag_artifact(self, X_test: pd.DataFrame):
         model = self._load_model()
         bag_info = {}
+        X_test = self.transform_X(X=X_test)
         bag_info["pred_proba_test_per_child"] = self.get_per_child_test(X_test=X_test, model=model)
         bag_info["val_idx_per_child"] = self.get_per_child_val_idx(model=model)
         return bag_info
