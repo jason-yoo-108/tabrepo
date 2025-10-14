@@ -111,6 +111,7 @@ class TabArenaContext:
         subset: str | None = None,
         folds: list[int] | None = None,
         score_on_val: bool = False,
+        average_seeds: bool = True,
         tmp_treat_tasks_independently: bool = False,
     ) -> pd.DataFrame:
         from tabrepo.nips2025_utils.compare import compare_on_tabarena
@@ -122,6 +123,7 @@ class TabArenaContext:
             folds=folds,
             tabarena_context=self,
             score_on_val=score_on_val,
+            average_seeds=average_seeds,
             tmp_treat_tasks_independently=tmp_treat_tasks_independently,
         )
 
@@ -331,6 +333,24 @@ class TabArenaContext:
 
         results = results.rename(columns={"framework": "method"})
         return results
+
+    def run_portfolio_from_config_types(
+        self,
+        repo: AbstractRepository,
+        config_types: list[str],
+        n_portfolio: int,
+        n_ensemble: int | None = None,
+        time_limit: int | None = None,
+    ) -> pd.DataFrame:
+        simulator = PaperRunTabArena(repo=repo, backend=self.backend)
+        cur_result = simulator.run_zs_from_types(
+            config_types=config_types,
+            n_portfolios=n_portfolio,
+            n_ensemble=n_ensemble,
+            n_ensemble_in_name=True,
+            time_limit=time_limit,
+        )
+        return cur_result
 
     def load_hpo_results(self, method: str, holdout: bool = False) -> pd.DataFrame:
         metadata = self.method_metadata(method=method)
