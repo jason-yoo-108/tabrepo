@@ -216,6 +216,7 @@ class TabArenaEvaluator:
         calibration_framework: str | None = "auto",
         average_seeds: bool = True,
         tmp_treat_tasks_independently: bool = False,  # FIXME: Need to make a weighted elo logic
+        only_return_methods: list[str] | None = None,
         leaderboard_kwargs: dict | None = None,
         plot_with_baselines: bool = False,
     ) -> pd.DataFrame:
@@ -386,10 +387,30 @@ class TabArenaEvaluator:
         leaderboard = tabarena.leaderboard(
             data=df_results_rank_compare,
             **leaderboard_kwargs,
+            only_return_methods=only_return_methods,
         )
         elo_map = leaderboard["elo"]
         leaderboard = leaderboard.reset_index(drop=False)
         save_pd.save(path=f"{self.output_dir}/tabarena_leaderboard.csv", df=leaderboard)
+
+        results_per_task = tabarena.compute_results_per_task(data=df_results_rank_compare)
+
+        if only_return_methods:
+            return_method_names = []
+            for method in only_return_methods:
+                return_method_names.extend(
+                    [method, f"{method} (default)", f"{method} (tuned)", f"{method} (tuned + ensemble)"]
+                )
+            df_results_rank_compare = df_results_rank_compare[df_results_rank_compare[self.method_col].isin(return_method_names)]
+            results_per_task = results_per_task[results_per_task[self.method_col].isin(return_method_names)]
+            new_baselines, new_baseline_colors = [], []
+            for baseline, baseline_color in zip(baselines, baseline_colors):
+                if baseline in return_method_names:
+                    new_baselines.append(baseline)
+                    new_baseline_colors.append(baseline_color)
+            baselines, baseline_colors = new_baselines, new_baseline_colors
+            framework_types = [ftype for ftype in framework_types if ftype in return_method_names]
+            imputed_names = [name for name in imputed_names if name in return_method_names]
 
         self.create_leaderboard_latex(leaderboard, framework_types=framework_types, save_dir=self.output_dir)
 
@@ -429,6 +450,7 @@ class TabArenaEvaluator:
             show=False
         )
 
+<<<<<<< HEAD:tabarena/tabarena/paper/tabarena_evaluator.py
         results_per_task = tabarena.compute_results_per_task(data=df_results_rank_compare)
         results_per_split = tabarena.compute_results_per_task(data=df_results_rank_compare, include_seed_col=True)
 
@@ -438,6 +460,23 @@ class TabArenaEvaluator:
         # extra_cols = [c for c in df_results_rank_compare.columns if c not in results_per_split.columns]
         # results_per_split_w_metadata = results_per_split.merge(df_results_rank_compare[[*groupby_columns, *extra_cols]], on=groupby_columns)
         # assert len(results_per_split) == len(results_per_split_w_metadata)
+=======
+        def rename_model(name: str):
+            parts = name.split(" ")
+            if parts[0] in f_map_type_name:
+                parts[0] = f_map_type_name[parts[0]]
+            name = " ".join(parts)
+            return name.replace('(tuned + ensemble)', '(tuned + ensembled)')
+
+        # use tuned+ensembled version if available, and default otherwise
+        tune_methods = results_per_task[self.method_col].map(f_map_inverse)
+        method_types = results_per_task[self.method_col].map(f_map_type).fillna(results_per_task[self.method_col])
+        tuned_ens_types = method_types[tune_methods == 'tuned_ensembled']
+        results_te_per_task = results_per_task[(tune_methods == 'tuned_ensembled') | ((tune_methods == 'default') & ~method_types.isin(tuned_ens_types))]
+
+        # rename model part
+        results_te_per_task.loc[:, self.method_col] = results_te_per_task[self.method_col].map(rename_model)
+>>>>>>> 2b00aa5 (calculate results for all methods, only return subset of methods):tabrepo/paper/tabarena_evaluator.py
 
         # FIXME: Is critical diagram incorrect?
         if plot_cdd:

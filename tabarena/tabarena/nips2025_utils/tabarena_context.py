@@ -111,6 +111,7 @@ class TabArenaContext:
         fillna: str | pd.DataFrame | None = "RF (default)",
         remove_imputed: bool = False,
         tmp_treat_tasks_independently: bool = False,
+        only_return_methods: list[str] | None = None,
         leaderboard_kwargs: dict | None = None,
     ) -> pd.DataFrame:
         from tabarena.nips2025_utils.compare import compare_on_tabarena
@@ -126,6 +127,7 @@ class TabArenaContext:
             fillna=fillna,
             remove_imputed=remove_imputed,
             tmp_treat_tasks_independently=tmp_treat_tasks_independently,
+            only_return_methods=only_return_methods,
             leaderboard_kwargs=leaderboard_kwargs,
         )
 

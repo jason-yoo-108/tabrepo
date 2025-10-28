@@ -93,6 +93,7 @@ class TabArena:
         relative_error_kwargs: dict | None = None,
         elo_kwargs: dict | None = None,
         sort_by: str | list[str] | None = "rank",
+        only_return_methods: list[str] | None = None,
     ):
         if elo_kwargs is None:
             elo_kwargs = {}
@@ -176,6 +177,13 @@ class TabArena:
             results = results.drop(columns=[IMPROVABILITY])
         results.index.name = self.method_col
 
+        if only_return_methods:
+            return_method_names = []
+            for method in only_return_methods:
+                return_method_names.extend(
+                    [method, f"{method} (default)", f"{method} (tuned)", f"{method} (tuned + ensemble)"]
+                )
+            results = results[results.index.isin(return_method_names)]
         return results
 
     def verify_data(self, data: pd.DataFrame):
