@@ -206,6 +206,7 @@ class TabArenaEvaluator:
         calibration_framework: str | None = "auto",
         average_seeds: bool = True,
         tmp_treat_tasks_independently: bool = False,  # FIXME: Need to make a weighted elo logic
+        only_return_methods: list[str] | None = None,
         leaderboard_kwargs: dict | None = None,
     ) -> pd.DataFrame:
         if leaderboard_kwargs is None:
@@ -442,10 +443,30 @@ class TabArenaEvaluator:
         leaderboard = tabarena.leaderboard(
             data=df_results_rank_compare,
             **leaderboard_kwargs,
+            only_return_methods=only_return_methods,
         )
         elo_map = leaderboard["elo"]
         leaderboard = leaderboard.reset_index(drop=False)
         save_pd.save(path=f"{self.output_dir}/tabarena_leaderboard.csv", df=leaderboard)
+
+        results_per_task = tabarena.compute_results_per_task(data=df_results_rank_compare)
+
+        if only_return_methods:
+            return_method_names = []
+            for method in only_return_methods:
+                return_method_names.extend(
+                    [method, f"{method} (default)", f"{method} (tuned)", f"{method} (tuned + ensemble)"]
+                )
+            df_results_rank_compare = df_results_rank_compare[df_results_rank_compare[self.method_col].isin(return_method_names)]
+            results_per_task = results_per_task[results_per_task[self.method_col].isin(return_method_names)]
+            new_baselines, new_baseline_colors = [], []
+            for baseline, baseline_color in zip(baselines, baseline_colors):
+                if baseline in return_method_names:
+                    new_baselines.append(baseline)
+                    new_baseline_colors.append(baseline_color)
+            baselines, baseline_colors = new_baselines, new_baseline_colors
+            framework_types = [ftype for ftype in framework_types if ftype in return_method_names]
+            imputed_names = [name for name in imputed_names if name in return_method_names]
 
         self.create_leaderboard_latex(leaderboard, framework_types=framework_types, save_dir=self.output_dir)
 
@@ -484,8 +505,6 @@ class TabArenaEvaluator:
             plot_tune_types=plot_tune_types,
             show=False
         )
-
-        results_per_task = tabarena.compute_results_per_task(data=df_results_rank_compare)
 
         def rename_model(name: str):
             parts = name.split(" ")
