@@ -66,6 +66,8 @@ RUN set -ex && \
 # (Optionally also remove the uv binary if you truly don’t need it)
 # && rm -f "$(command -v uv)"
 
+RUN pip install --no-cache-dir scikit-learn==1.6.1 pandas==2.3.2 numpy==1.26.4 skrub==0.6.1 imbalanced-learn==0.14.0
+
 RUN rm -rf /root/.cache/pip
 
 # GPU images can come pre-installed with flash-attn, uncomment this to ensure it isn't installed

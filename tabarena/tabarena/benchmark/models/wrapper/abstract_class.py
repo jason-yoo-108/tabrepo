@@ -26,6 +26,7 @@ class AbstractExecModel:
         shuffle_test: bool = True,
         shuffle_seed: int = 0,
         reset_index_test: bool = True,
+        extra_preprocessor_path: str = None,
     ):
         self.problem_type = problem_type
         self.eval_metric = eval_metric
@@ -37,9 +38,21 @@ class AbstractExecModel:
         self.label_cleaner: LabelCleaner = None
         self._feature_generator = None
         self.failure_artifact = None
+        if extra_preprocessor_path is not None:
+            # If this is present, always run these extra feature preprocessors
+            # TODO: Jason: Support inverse_transform_y, transform_y_pred_proba, inverse_transform_y_pred_proba
+            FeaturePreprocessor, TargetPreprocessor = self._import_extra_preprocessor_classes(extra_preprocessor_path)
+            self._extra_feature_preprocessor = FeaturePreprocessor()
+            self._extra_target_preprocessor = TargetPreprocessor()
+        else:
+            self._extra_feature_preprocessor = None
+            self._extra_target_preprocessor = None
 
     def transform_y(self, y: pd.Series) -> pd.Series:
-        return self.label_cleaner.transform(y)
+        y = self.label_cleaner.transform(y)
+        if self._extra_target_preprocessor:
+            y = self._extra_target_preprocessor.transform(y)
+        return y
 
     def inverse_transform_y(self, y: pd.Series) -> pd.Series:
         return self.label_cleaner.inverse_transform(y)
@@ -52,7 +65,9 @@ class AbstractExecModel:
 
     def transform_X(self, X: pd.DataFrame) -> pd.DataFrame:
         if self.preprocess_data:
-            return self._feature_generator.transform(X)
+            X = self._feature_generator.transform(X)
+        if self._extra_feature_preprocessor:
+            X = self._extra_feature_preprocessor.transform(X)
         return X
 
     def _preprocess_fit_transform(self, X: pd.DataFrame, y: pd.Series):
@@ -60,11 +75,23 @@ class AbstractExecModel:
             self.label_cleaner = LabelCleaner.construct(problem_type=self.problem_type, y=y)
         else:
             self.label_cleaner = LabelCleanerDummy(problem_type=self.problem_type)
+        if self._extra_feature_preprocessor:
+            self._extra_feature_preprocessor.fit(X, y)
+            X = self._extra_feature_preprocessor.transform(X)
+        if self._extra_target_preprocessor:
+            self._extra_target_preprocessor.fit(y)
         if self.preprocess_data:
             self._feature_generator = AutoMLPipelineFeatureGenerator()
             X = self._feature_generator.fit_transform(X=X, y=y)
         y = self.transform_y(y)
         return X, y
+
+    def _import_extra_preprocessor_classes(self, program_path: str):
+        import importlib
+        spec = importlib.util.spec_from_file_location("fp_programs", program_path)
+        fp_programs = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fp_programs)
+        return fp_programs.FeaturePreprocessor, fp_programs.TargetPreprocessor
 
     def post_fit(self, X: pd.DataFrame, y: pd.Series, X_test: pd.DataFrame):
         pass

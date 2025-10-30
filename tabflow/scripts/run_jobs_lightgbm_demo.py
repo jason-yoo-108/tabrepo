@@ -9,7 +9,7 @@ from tabarena.benchmark.experiment.experiment_constructor import Experiment, Yam
 # 1. Build the docker (ensure you use your own docker name to avoid overwriting other user's docker containers
 bash ./tabarena/tabflow/docker/build_docker.sh tabarena tabarena-neerick 763104351884 097403188315 us-west-2
 """
-docker_image_uri = "097403188315.dkr.ecr.us-west-2.amazonaws.com/tabarena:tabarena-neerick"
+docker_image_uri = "097403188315.dkr.ecr.us-west-2.amazonaws.com/tabarena:tabarena-jason"
 
 """
 # 2. Need to set aws default region to us-west-2
@@ -34,10 +34,10 @@ https://us-west-2.console.aws.amazon.com/sagemaker/home?region=us-west-2#/jobs
 
 # 6. View the result artifacts
 https://us-west-2.console.aws.amazon.com/s3/buckets/{s3_bucket}?prefix={experiment_name}/
-e.g: https://us-west-2.console.aws.amazon.com/s3/buckets/prateek-ag?prefix=tabarena-lightgbm-demo/
+e.g: https://us-west-2.console.aws.amazon.com/s3/buckets/jason-ag-dev?prefix=tabarena-lightgbm-demo/
 
 # 7. Download the artifacts to local
-aws s3 cp --recursive "s3://prateek-ag/tabarena-lightgbm-demo" ../data/tabarena-lightgbm-demo/ --exclude "*.log"
+aws s3 cp --recursive "s3://jason-ag-dev/tabarena-lightgbm-demo" ../data/tabarena-lightgbm-demo/ --exclude "*.log"
 
 # 8. Aggregate the local artifacts and evaluate them
 Refer to `run_evaluate_lightgbm_demo.py`

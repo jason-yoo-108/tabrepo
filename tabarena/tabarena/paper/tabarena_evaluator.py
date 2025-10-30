@@ -450,17 +450,6 @@ class TabArenaEvaluator:
             show=False
         )
 
-<<<<<<< HEAD:tabarena/tabarena/paper/tabarena_evaluator.py
-        results_per_task = tabarena.compute_results_per_task(data=df_results_rank_compare)
-        results_per_split = tabarena.compute_results_per_task(data=df_results_rank_compare, include_seed_col=True)
-
-        # TODO: Consider adding the metadata to the saved `results_per_split.csv` file?
-        # assert len(results_per_split) == len(df_results_rank_compare)
-        # groupby_columns = tabarena._get_groupby_cols(results=results_per_split)
-        # extra_cols = [c for c in df_results_rank_compare.columns if c not in results_per_split.columns]
-        # results_per_split_w_metadata = results_per_split.merge(df_results_rank_compare[[*groupby_columns, *extra_cols]], on=groupby_columns)
-        # assert len(results_per_split) == len(results_per_split_w_metadata)
-=======
         def rename_model(name: str):
             parts = name.split(" ")
             if parts[0] in f_map_type_name:
@@ -476,7 +465,6 @@ class TabArenaEvaluator:
 
         # rename model part
         results_te_per_task.loc[:, self.method_col] = results_te_per_task[self.method_col].map(rename_model)
->>>>>>> 2b00aa5 (calculate results for all methods, only return subset of methods):tabrepo/paper/tabarena_evaluator.py
 
         # FIXME: Is critical diagram incorrect?
         if plot_cdd:

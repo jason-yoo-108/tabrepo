@@ -1,0 +1,70 @@
+# syntax=docker/dockerfile:1.7
+
+#############################
+# 1. Choose target (cpu or gpu)
+#############################
+ARG DEVICE=cpu
+
+#############################
+# 2. Define both stages
+#############################
+# --- CPU (small, no CUDA) ---
+FROM 763104351884.dkr.ecr.us-west-2.amazonaws.com/pytorch-training:2.5.1-cpu-py311-ubuntu22.04-sagemaker AS cpu
+
+# --- GPU (large, CUDA 12.4) ---
+FROM 763104351884.dkr.ecr.us-west-2.amazonaws.com/pytorch-training:2.5.1-gpu-py311-cu124-ubuntu22.04-sagemaker AS gpu
+
+#############################
+# 3. Pick the one we want
+#############################
+FROM ${DEVICE} AS base
+LABEL build.device="${DEVICE}"
+
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /workspace
+
+# Only file needed at runtime; set perms at copy time to avoid extra layer
+COPY --chmod=755 ./tabrepo/tabflow/tabflow/cli/evaluate.py /workspace/evaluate.py
+
+#############################
+# 4. Builder: create wheels for everything (incl. deps)
+#############################
+FROM base AS builder
+
+# Bring in the repo so we can resolve its extras (benchmark) and tabflow
+COPY tabrepo/ tabrepo/
+
+# Build wheels for:
+#  - local packages with extras (tabrepo[benchmark], tabflow)
+#  - pinned third-party packages
+# This also pulls Autogluon and all needed deps into /wheels.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python -m pip wheel --wheel-dir /wheels \
+        scikit-learn==1.6.1 \
+        pandas==2.3.2 \
+        numpy==1.26.4 \
+        skrub==0.6.1 \
+        imbalanced-learn==0.14.0
+
+#############################
+# 5. Final: install from builder wheels without copying them
+#############################
+FROM base AS final
+
+WORKDIR /workspace
+
+COPY tabrepo/ tabrepo/
+
+RUN pip install -e ./tabrepo/[benchmark] && \
+    pip install -e ./tabrepo/tabflow/ && \
+    rm -rf /root/.cache/pip
+
+# Mount the wheels from the builder only for the duration of this RUN,
+# so they don't become part of the image layers.
+RUN --mount=type=bind,from=builder,source=/wheels,target=/wheels,ro \
+    python -m pip install --find-links=/wheels --no-compile \
+      scikit-learn==1.6.1 pandas==2.3.2 numpy==1.26.4 skrub==0.6.1 imbalanced-learn==0.14.0 \
+    && find / -type d -name "__pycache__" -prune -exec rm -rf {} +
