@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
     methods = [
         "LightGBM_aio_0808",
-        "LightGBM_aio_0812",
+        # "LightGBM_aio_0812",
     ]
 
     for method in methods:

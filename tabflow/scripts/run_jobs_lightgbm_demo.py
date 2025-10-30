@@ -9,7 +9,7 @@ from tabrepo.benchmark.experiment.experiment_constructor import Experiment, Yaml
 # 1. Build the docker (ensure you use your own docker name to avoid overwriting other user's docker containers
 bash ./tabrepo/tabflow/docker/build_docker.sh tabarena tabarena-neerick 763104351884 097403188315 us-west-2
 """
-docker_image_uri = "097403188315.dkr.ecr.us-west-2.amazonaws.com/tabarena:tabarena-neerick"
+docker_image_uri = "097403188315.dkr.ecr.us-west-2.amazonaws.com/tabarena:tabarena-jason"
 
 """
 # 2. Need to set aws default region to us-west-2
@@ -34,10 +34,10 @@ https://us-west-2.console.aws.amazon.com/sagemaker/home?region=us-west-2#/jobs
 
 # 6. View the result artifacts
 https://us-west-2.console.aws.amazon.com/s3/buckets/{s3_bucket}?prefix={experiment_name}/
-e.g: https://us-west-2.console.aws.amazon.com/s3/buckets/prateek-ag?prefix=tabarena-lightgbm-demo/
+e.g: https://us-west-2.console.aws.amazon.com/s3/buckets/jason-ag-dev?prefix=tabarena-lightgbm-demo/
 
 # 7. Download the artifacts to local
-aws s3 cp --recursive "s3://prateek-ag/tabarena-lightgbm-demo" ../data/tabarena-lightgbm-demo/ --exclude "*.log"
+aws s3 cp --recursive "s3://jason-ag-dev/tabarena-lightgbm-demo" ../data/tabarena-lightgbm-demo/ --exclude "*.log"
 
 # 8. Aggregate the local artifacts and evaluate them
 Refer to `run_evaluate_lightgbm_demo.py`
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     task_metadata = tabarena_context.task_metadata.copy()  # metadata about the available datasets
 
     experiment_name = "tabarena-lightgbm-demo"  # The experiment name, used as the s3 path prefix for the saved files.
-    s3_bucket = "prateek-ag"  # The s3 bucket to save results to
+    s3_bucket = "jason-ag-dev"  # The s3 bucket to save results to
 
     max_concurrent_jobs = 10  # the max number of instances running jobs at the same time (values 1 - 15000)
     batch_size = 1  # The number of jobs to give to a single instance to run sequentially.

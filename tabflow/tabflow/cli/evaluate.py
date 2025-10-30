@@ -2,21 +2,30 @@ from __future__ import annotations
 
 import argparse
 import logging
+import importlib.util, pathlib
 
 from autogluon.common.loaders import load_json
 from tabflow.utils.utils import find_method_by_name
 from tabflow.utils.s3_utils import download_from_s3
 from tabflow.utils.logging_utils import setup_logging
 from tabrepo import EvaluationRepository
-from tabrepo.benchmark.experiment import ExperimentBatchRunner, AGModelBagExperiment, Experiment, YamlExperimentSerializer, YamlSingleExperimentSerializer, AGExperiment
-from tabrepo.benchmark.models.simple import SimpleLightGBM
+from tabrepo.benchmark.experiment import ExperimentBatchRunner, Experiment, YamlExperimentSerializer, YamlSingleExperimentSerializer, AGExperiment, AGModelBagExperiment
 from autogluon.tabular.models import *
 from tabrepo.benchmark.models.ag import *
 
 logger = setup_logging(level=logging.INFO)
 
 
-import importlib.util, pathlib
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 
 def expanded_globals(custom_model_path: str):
     # NOTE: The custom model MUST be named ExecModel
@@ -24,13 +33,17 @@ def expanded_globals(custom_model_path: str):
     spec = importlib.util.spec_from_file_location("program", program_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return {**globals(), "ExecModel": module.ExecModel}
+    expanded_globals = globals()
+    if hasattr(module, "ExecModel"):
+        expanded_globals["ExecModel"] = module.ExecModel
+    return expanded_globals
 
 
 def load_tasks(
     tasks_s3_path: str,
     methods_s3_path: str,
     custom_model_s3_path: str,
+    custom_model_is_preprocessor: bool,
 ) -> list[dict]:
     # Download methods and tasks to parse from S3
     methods_config_path = download_from_s3(s3_path=methods_s3_path, destination_path=None)
@@ -52,7 +65,12 @@ def load_tasks(
         method_name = task["method_name"]
         method_kwargs = find_method_by_name(methods_config, method_name)
         context = expanded_globals(custom_model_path) if custom_model_path else None
+        if custom_model_is_preprocessor:
+            method_kwargs["method_kwargs"]["extra_preprocessor_path"] = custom_model_path
         method: Experiment = YamlSingleExperimentSerializer.parse_method(method_kwargs, context)
+        logger.info(f"TASK METHOD CLASS TYPE: {method.__class__.__name__}")
+        logger.info(f"TASK METHOD_KWARGS: {method_kwargs}")
+        logger.info(f"TASK METHOD ENUMERATED: {vars(method)}")
 
         task_dict = dict(
             method=method,
@@ -77,6 +95,7 @@ def evaluate(
     s3_dataset_cache: str = None,
     task_metadata_path: str = None,
     custom_model_s3_path: str = None,
+    custom_model_is_preprocessor: str = False,
     ignore_cache: bool = False,
 ):
     # Load Context
@@ -96,7 +115,8 @@ def evaluate(
     tasks = load_tasks(
         tasks_s3_path=tasks_s3_path,
         methods_s3_path=methods_s3_path,
-        custom_model_s3_path=custom_model_s3_path
+        custom_model_s3_path=custom_model_s3_path,
+        custom_model_is_preprocessor=custom_model_is_preprocessor,
     )
 
     experiment_batch_runner = ExperimentBatchRunner(
@@ -161,8 +181,10 @@ if __name__ == '__main__':
     parser.add_argument('--task_metadata_path', type=str, required=False, default=None, help="S3 path for dataset cache")
     parser.add_argument('--custom_model_s3_path', type=str, required=False, default=None,
                         help="S3 path for a Python class that extends AbstractExecModel")
-    parser.add_argument('--raise_on_failure', type=bool, required=False, default=False, help="Crashes if the program fails")
-    parser.add_argument('--ignore_cache', type=bool, required=False, default=False,
+    parser.add_argument('--custom_model_is_preprocessor', type=str2bool, required=False, default=False,
+                        help="Whether the S3 path contains preprocessors that should be injected to AbstractExecModel")
+    parser.add_argument('--raise_on_failure', type=str2bool, required=False, default=False, help="Crashes if the program fails")
+    parser.add_argument('--ignore_cache', type=str2bool, required=False, default=False,
                         help="If True, will run the experiments regardless if the cache exists already.")
 
     args = parser.parse_args()
@@ -184,5 +206,6 @@ if __name__ == '__main__':
         s3_dataset_cache=args.s3_dataset_cache,
         task_metadata_path=args.task_metadata_path,
         custom_model_s3_path=args.custom_model_s3_path,
+        custom_model_is_preprocessor=args.custom_model_is_preprocessor,
         raise_on_failure=args.raise_on_failure,
     )

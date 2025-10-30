@@ -42,13 +42,13 @@ WORKDIR /workspace
 
 # Delete uv cache to save ~3.5 GB of space
 # Comment out to instead install the latest official release via pip.
-RUN set -ex && \
-    git clone --depth 1 https://github.com/autogluon/autogluon && \
-    ./autogluon/full_install.sh && \
-    uv cache clean && \
-    uv cache prune && \
-    pip uninstall -y uv && \
-    rm -rf ~/.cache/uv
+# RUN set -ex && \
+#     git clone --depth 1 https://github.com/autogluon/autogluon && \
+#     ./autogluon/full_install.sh && \
+#     uv cache clean && \
+#     uv cache prune && \
+#     pip uninstall -y uv && \
+#     rm -rf ~/.cache/uv
 
 # Delete the below line if you clone the tabrepo repo and source install it in the Dockerfile
 COPY tabrepo/ tabrepo/
@@ -56,6 +56,8 @@ COPY tabrepo/ tabrepo/
 # Install the required packages
 RUN pip install -e ./tabrepo/[benchmark] && \
     pip install -e ./tabrepo/tabflow/
+
+RUN pip install --no-cache-dir scikit-learn==1.6.1 pandas==2.3.2 numpy==1.26.4 skrub==0.6.1 imbalanced-learn==0.14.0
 
 RUN rm -rf /root/.cache/pip
 

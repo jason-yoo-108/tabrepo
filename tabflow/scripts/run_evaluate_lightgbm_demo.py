@@ -15,7 +15,7 @@ if __name__ == '__main__':
     method = "LightGBM_demo"
     name_suffix = "_demo"
     path_raw = Path(
-        "/home/ubuntu/workspace/data/tabarena-lightgbm-demo/data/"
+        "/home/ubuntu/research/tabrepo/data/tabarena-lightgbm-demo/data/"
     )
     fig_output_dir = Path("tabarena_figs") / method
     cache = True
